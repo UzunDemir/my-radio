@@ -111,24 +111,39 @@
 //   );
 // }
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function Home() {
   const playlist = [
     "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Gianluca%20Dimeo%20%26%20Daniel%20Santoro%20-%20Wings.mp3",
     "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Omer%20Said%20-%20Modern%20Talking.mp3",
-    "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Omer%20Said%20-%20Notte%20Senza%20Te.mp3",
-    "http://185.43.6.38/hc/preview/temp_067TG/2025.08/Omer%20Said%20-%20Left%20In%20The%20Rain.mp3",
-    "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Omer%20Said%20-%20Fade%20With%20You.mp3"
-    // Добавь остальные треки по аналогии
+    "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Omer%20Said%20-%20Notte%20Senza%20Te.mp3"
   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showPlaylist, setShowPlaylist] = useState(false);
   const audioRef = useRef(null);
+  const [frequencyData, setFrequencyData] = useState(new Array(32).fill(0));
 
-  const getProxyUrl = (url) =>
-    `/api/proxy?url=${encodeURIComponent(url)}`;
+  const getProxyUrl = (url) => `/api/proxy?url=${encodeURIComponent(url)}`;
 
   const handleEnded = () => {
     setCurrentIndex((prev) => (prev + 1) % playlist.length);
@@ -141,69 +156,84 @@ export default function Home() {
     }
   }, [currentIndex]);
 
-  return (
-    <div style={{ textAlign: "center", padding: "20px", fontFamily: "Arial" }}>
-      {/* Логотип */}
-      <img src="/unew.png" alt="Logo" width={150} style={{ marginBottom: "20px" }} />
-      <h1 style={{ color: "#222" }}>Мини-радио через прокси</h1>
+  useEffect(() => {
+    let audioCtx, analyser, dataArray, source;
 
-      {/* Аудио плеер */}
-      <div style={{ margin: "20px" }}>
-        <audio
-          controls
-          ref={audioRef}
-          onEnded={handleEnded}
-          style={{ width: "80%", borderRadius: "10px" }}
-        >
-          <source
-            src={getProxyUrl(playlist[currentIndex])}
-            type="audio/mpeg"
-          />
+    if (audioRef.current) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      source = audioCtx.createMediaElementSource(audioRef.current);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+
+      analyser.fftSize = 64;
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+
+      const animate = () => {
+        analyser.getByteFrequencyData(dataArray);
+        setFrequencyData(Array.from(dataArray));
+        requestAnimationFrame(animate);
+      };
+      animate();
+    }
+  }, [currentIndex]);
+
+  const chartData = {
+    labels: frequencyData.map((_, i) => i),
+    datasets: [
+      {
+        label: 'Frequency',
+        data: frequencyData,
+        backgroundColor: '#4caf50'
+      }
+    ]
+  };
+
+  return (
+    <div style={{ textAlign: 'center', backgroundColor: '#121212', color: 'white', padding: '20px' }}>
+      <img src="/unew.png" alt="Logo" width={150} style={{ marginBottom: '20px' }} />
+      <h1 style={{ fontFamily: 'Arial, sans-serif' }}>Современный Плейер</h1>
+
+      <div style={{ margin: '20px auto', width: '80%' }}>
+        <audio controls ref={audioRef} onEnded={handleEnded} style={{ width: '100%' }}>
+          <source src={getProxyUrl(playlist[currentIndex])} type="audio/mpeg" />
           Ваш браузер не поддерживает аудио.
         </audio>
       </div>
 
-      {/* Кнопка открытия плейлиста */}
-      <button
-        onClick={() => setShowPlaylist(!showPlaylist)}
-        style={{
-          padding: "10px 20px",
-          background: "#2196f3",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-          marginBottom: "20px",
-        }}
-      >
-        📂 {showPlaylist ? "Скрыть плейлист" : "Показать плейлист"}
-      </button>
+      <div style={{ maxWidth: '80%', margin: 'auto' }}>
+        <Bar
+          data={chartData}
+          options={{
+            animation: { duration: 0 },
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { type: 'category' }, y: { beginAtZero: true } }
+          }}
+        />
+      </div>
 
-      {/* Список треков */}
-      {showPlaylist && (
-        <ul style={{ listStyle: "none", padding: 0, maxWidth: "500px", margin: "0 auto" }}>
-          {playlist.map((url, idx) => (
-            <li
-              key={idx}
+      <h2>Плейлист</h2>
+      <ul style={{ listStyle: 'none', padding: 0 }}>
+        {playlist.map((url, idx) => (
+          <li key={idx} style={{ margin: '10px' }}>
+            <button
               onClick={() => setCurrentIndex(idx)}
               style={{
-                padding: "8px 12px",
-                cursor: "pointer",
-                background: idx === currentIndex ? "#4caf50" : "transparent",
-                color: idx === currentIndex ? "white" : "#333",
-                borderRadius: "4px",
-                marginBottom: "4px",
-                textAlign: "left",
-                transition: "0.2s",
+                padding: '8px 16px',
+                background: idx === currentIndex ? '#4caf50' : '#2196f3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#ddd"}
-              onMouseLeave={(e) => e.currentTarget.style.background = idx === currentIndex ? "#4caf50" : "transparent"}
             >
-              {decodeURIComponent(url.split("/").pop())}
-            </li>
-          ))}
-        </ul>
-      )}
+              {decodeURIComponent(url.split('/').pop())}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
