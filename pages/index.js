@@ -111,7 +111,7 @@
 //   );
 // }
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -119,18 +119,10 @@ import {
   BarElement,
   Title,
   Tooltip,
-  Legend
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip);
 
 export default function Home() {
   const playlist = [
@@ -143,7 +135,8 @@ export default function Home() {
   const audioRef = useRef(null);
   const [frequencyData, setFrequencyData] = useState(new Array(32).fill(0));
 
-  const getProxyUrl = (url) => `/api/proxy?url=${encodeURIComponent(url)}`;
+  const getProxyUrl = (url) =>
+    `/api/proxy?url=${encodeURIComponent(url)}`;
 
   const handleEnded = () => {
     setCurrentIndex((prev) => (prev + 1) % playlist.length);
@@ -157,7 +150,10 @@ export default function Home() {
   }, [currentIndex]);
 
   useEffect(() => {
-    let audioCtx, analyser, dataArray, source;
+    let audioCtx;
+    let analyser;
+    let dataArray;
+    let source;
 
     if (audioRef.current) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -180,56 +176,83 @@ export default function Home() {
   }, [currentIndex]);
 
   const chartData = {
-    labels: frequencyData.map((_, i) => i),
+    labels: frequencyData.map((_, i) => i.toString()),
     datasets: [
       {
-        label: 'Frequency',
+        label: "Частоты",
         data: frequencyData,
-        backgroundColor: '#4caf50'
-      }
-    ]
+        backgroundColor: "#4caf50",
+      },
+    ],
+  };
+
+  const chartOptions = {
+    animation: {
+      duration: 0,
+    },
+    responsive: true,
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    scales: {
+      x: {
+        display: false,
+      },
+      y: {
+        display: false,
+        min: 0,
+        max: 255,
+      },
+    },
   };
 
   return (
-    <div style={{ textAlign: 'center', backgroundColor: '#121212', color: 'white', padding: '20px' }}>
-      <img src="/unew.png" alt="Logo" width={150} style={{ marginBottom: '20px' }} />
-      <h1 style={{ fontFamily: 'Arial, sans-serif' }}>Современный Плейер</h1>
+    <div
+      style={{
+        textAlign: "center",
+        backgroundColor: "#121212",
+        color: "white",
+        padding: "20px",
+        minHeight: "100vh",
+      }}
+    >
+      <img src="/unew.png" alt="Logo" width={150} style={{ marginBottom: "20px" }} />
+      <h1>Мини-радио с визуализацией</h1>
 
-      <div style={{ margin: '20px auto', width: '80%' }}>
-        <audio controls ref={audioRef} onEnded={handleEnded} style={{ width: '100%' }}>
+      <div style={{ margin: "20px" }}>
+        <audio
+          controls
+          ref={audioRef}
+          onEnded={handleEnded}
+          style={{ width: "80%" }}
+        >
           <source src={getProxyUrl(playlist[currentIndex])} type="audio/mpeg" />
           Ваш браузер не поддерживает аудио.
         </audio>
       </div>
 
-      <div style={{ maxWidth: '80%', margin: 'auto' }}>
-        <Bar
-          data={chartData}
-          options={{
-            animation: { duration: 0 },
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { x: { type: 'category' }, y: { beginAtZero: true } }
-          }}
-        />
+      <div style={{ width: "80%", margin: "auto" }}>
+        <Bar data={chartData} options={chartOptions} />
       </div>
 
       <h2>Плейлист</h2>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul style={{ listStyle: "none", padding: 0 }}>
         {playlist.map((url, idx) => (
-          <li key={idx} style={{ margin: '10px' }}>
+          <li key={idx} style={{ margin: "10px" }}>
             <button
               onClick={() => setCurrentIndex(idx)}
               style={{
-                padding: '8px 16px',
-                background: idx === currentIndex ? '#4caf50' : '#2196f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer'
+                padding: "8px 16px",
+                background: idx === currentIndex ? "#4caf50" : "#2196f3",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
               }}
             >
-              {decodeURIComponent(url.split('/').pop())}
+              {decodeURIComponent(url.split("/").pop())}
             </button>
           </li>
         ))}
@@ -237,4 +260,3 @@ export default function Home() {
     </div>
   );
 }
-
