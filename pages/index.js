@@ -112,145 +112,99 @@
 // }
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Play, Pause, SkipBack, SkipForward, Music } from "lucide-react";
-
-const playlist = [
-  {
-    title: "Gianluca Dimeo & Daniel Santoro - Wings",
-    url: "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Gianluca%20Dimeo%20%26%20Daniel%20Santoro%20-%20Wings.mp3",
-  },
-  {
-    title: "David Guetta - Memories",
-    url: "https://www2.cs.uic.edu/~i101/SoundFiles/StarWars60.wav",
-  },
-];
 
 export default function Home() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(0);
+  const playlist = [
+    "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Gianluca%20Dimeo%20%26%20Daniel%20Santoro%20-%20Wings.mp3",
+    "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Omer%20Said%20-%20Modern%20Talking.mp3",
+    "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Omer%20Said%20-%20Notte%20Senza%20Te.mp3",
+    "http://185.43.6.38/hc/preview/temp_067TG/2025.08/Omer%20Said%20-%20Left%20In%20The%20Rain.mp3",
+    "http://185.43.6.38/hc/preview/temp_067TG/2025.09/Omer%20Said%20-%20Fade%20With%20You.mp3"
+    // Добавь остальные треки по аналогии
+  ];
+
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const audioRef = useRef(null);
-  const canvasRef = useRef(null);
+
+  const getProxyUrl = (url) =>
+    `/api/proxy?url=${encodeURIComponent(url)}`;
+
+  const handleEnded = () => {
+    setCurrentIndex((prev) => (prev + 1) % playlist.length);
+  };
 
   useEffect(() => {
-    if (!audioRef.current) return;
-    const audio = audioRef.current;
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = ctx.createAnalyser();
-    const source = ctx.createMediaElementSource(audio);
-    source.connect(analyser);
-    analyser.connect(ctx.destination);
-    analyser.fftSize = 64;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    const canvas = canvasRef.current;
-    const cctx = canvas.getContext("2d");
-
-    function draw() {
-      requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(dataArray);
-      cctx.clearRect(0, 0, canvas.width, canvas.height);
-      const barWidth = (canvas.width / bufferLength) * 1.5;
-      let x = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const barHeight = dataArray[i] / 2;
-        cctx.fillStyle = "#3b82f6";
-        cctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-        x += barWidth + 2;
-      }
+    if (audioRef.current) {
+      audioRef.current.load();
+      audioRef.current.play().catch(() => {});
     }
-    draw();
-  }, []);
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const playTrack = (index) => {
-    setCurrentTrack(index);
-    setIsPlaying(true);
-    setTimeout(() => audioRef.current.play(), 100);
-  };
-
-  const nextTrack = () => playTrack((currentTrack + 1) % playlist.length);
-  const prevTrack = () => playTrack((currentTrack - 1 + playlist.length) % playlist.length);
+  }, [currentIndex]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white p-6">
-      <motion.img
-        src="/unew.png"
-        alt="Logo"
-        className="w-32 mb-6 drop-shadow-lg"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-      />
+    <div style={{ textAlign: "center", padding: "20px", fontFamily: "Arial" }}>
+      {/* Логотип */}
+      <img src="/unew.png" alt="Logo" width={150} style={{ marginBottom: "20px" }} />
+      <h1 style={{ color: "#222" }}>Мини-радио через прокси</h1>
 
-      <div className="bg-gray-700/40 backdrop-blur-md rounded-2xl shadow-2xl p-6 w-full max-w-md">
-        <h1 className="text-xl font-bold text-center mb-4 flex items-center justify-center gap-2">
-          <Music className="w-6 h-6" /> Unew Radio
-        </h1>
-
-        <canvas ref={canvasRef} width="300" height="100" className="mb-4 rounded-md bg-black/40" />
-
-        <div className="flex justify-center items-center gap-6">
-          <button onClick={prevTrack} className="hover:text-blue-400">
-            <SkipBack size={28} />
-          </button>
-          <button
-            onClick={togglePlay}
-            className="w-14 h-14 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center shadow-lg"
-          >
-            {isPlaying ? <Pause size={32} /> : <Play size={32} />}
-          </button>
-          <button onClick={nextTrack} className="hover:text-blue-400">
-            <SkipForward size={28} />
-          </button>
-        </div>
-
-        <p className="text-center mt-4 text-sm text-gray-300">{playlist[currentTrack].title}</p>
-
-        <button
-          onClick={() => setShowPlaylist(!showPlaylist)}
-          className="mt-4 w-full px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition"
+      {/* Аудио плеер */}
+      <div style={{ margin: "20px" }}>
+        <audio
+          controls
+          ref={audioRef}
+          onEnded={handleEnded}
+          style={{ width: "80%", borderRadius: "10px" }}
         >
-          📂 {showPlaylist ? "Скрыть плейлист" : "Открыть плейлист"}
-        </button>
-
-        <AnimatePresence>
-          {showPlaylist && (
-            <motion.ul
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="mt-3 overflow-hidden bg-gray-800/50 rounded-lg divide-y divide-gray-700"
-            >
-              {playlist.map((track, index) => (
-                <li
-                  key={index}
-                  onClick={() => playTrack(index)}
-                  className={`px-4 py-2 cursor-pointer hover:bg-gray-700 transition ${
-                    currentTrack === index ? "text-blue-400 font-semibold" : ""
-                  }`}
-                >
-                  {track.title}
-                </li>
-              ))}
-            </motion.ul>
-          )}
-        </AnimatePresence>
-
-        <audio ref={audioRef} src={playlist[currentTrack].url} onEnded={nextTrack} />
+          <source
+            src={getProxyUrl(playlist[currentIndex])}
+            type="audio/mpeg"
+          />
+          Ваш браузер не поддерживает аудио.
+        </audio>
       </div>
+
+      {/* Кнопка открытия плейлиста */}
+      <button
+        onClick={() => setShowPlaylist(!showPlaylist)}
+        style={{
+          padding: "10px 20px",
+          background: "#2196f3",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          marginBottom: "20px",
+        }}
+      >
+        📂 {showPlaylist ? "Скрыть плейлист" : "Показать плейлист"}
+      </button>
+
+      {/* Список треков */}
+      {showPlaylist && (
+        <ul style={{ listStyle: "none", padding: 0, maxWidth: "500px", margin: "0 auto" }}>
+          {playlist.map((url, idx) => (
+            <li
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              style={{
+                padding: "8px 12px",
+                cursor: "pointer",
+                background: idx === currentIndex ? "#4caf50" : "transparent",
+                color: idx === currentIndex ? "white" : "#333",
+                borderRadius: "4px",
+                marginBottom: "4px",
+                textAlign: "left",
+                transition: "0.2s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#ddd"}
+              onMouseLeave={(e) => e.currentTarget.style.background = idx === currentIndex ? "#4caf50" : "transparent"}
+            >
+              {decodeURIComponent(url.split("/").pop())}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
+
